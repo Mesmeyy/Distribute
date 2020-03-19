@@ -33,7 +33,7 @@ class S_Kmeans{
     double Point[MAXN][MAXD];//slave必须要保存所有它拥有的点的所有数值
     struct aCluster All_Cluster[MAXN];//中心集合
     int Belong[MAXN];//该点属于的类的下标
-    double PointDistance[MAXN];//该点到所有类的最小距离
+    double Point_Distance[MAXN];//该点到所有类的最小距离
 
     public:
     int Cluster_Num;//类的个数
@@ -46,7 +46,7 @@ class S_Kmeans{
     bool ReadData();//读取全部的样本点
     int Mapper();//进行分片计算
     double Distance(int index,int j);//根据样本下标计算该样本距离j类中心的距离
-    int Combiner();//汇总该中心的各个维度总距离
+    int Combiner();//求分片的各个cluster的聚类中心
     int Reducer();//求该类各个维度的中心值
 };
 bool S_Kmeans::Init()
@@ -60,7 +60,7 @@ bool S_Kmeans::Init()
         Slave_Point_Num = Point_Num - (Slave_Index * every_points);
     }
     memset(Belong,0,sizeof(int)*MAXN);
-    memset(PointDistance,0,sizeof(double)*MAXN);
+    memset(Point_Distance,0,sizeof(double)*MAXN);
     return true;
 }
 bool S_Kmeans::ReadData()
@@ -90,26 +90,43 @@ bool S_Kmeans::ReadData()
     infile.close();
     return true;
 }
-
 int S_Kmeans::Mapper()
-{   //计算本split数据到所有中心的最小距离及属于哪一类
-    for(int i = 0;i < Point_Num;i++){
-        int index = 0;
-        double dis = INF;//这里有问题，不应该每次都是INF,应该记录每个point的最小值
-        for(int j = 0;j < Cluster_Num;j++){
+{   
+    //计算本split数据到所有中心的最小距离及属于哪一类
+    for(int i = 0;i < Slave_Point_Num;i++){
+        int index = -1;
+        double dis = INF;
+        int j;
+        for(j = 0;j < Cluster_Num;j++){
             if(Distance(i,j) < dis){
                 dis = Distance(i,j);
                 index = j;
             }
         }
-        if(index == Cluster_Index){
-            Slave_Acluster.Member[Slave_Acluster.Number++] = i;
-            std::cout << "Point " << i << " belong to " << Cluster_Index << " ... " << std::endl;
-        }
+        //找到最小点后对号入座
+        Belong[i] = j;
+        Point_Distance[i] = dis;
+        All_Cluster[j].Member[All_Cluster[j].Number++] = i;
     }
+    //现在所有的点都找到了自己属于哪个类
     return 0;
 }
-
+int S_Kmeans::Combiner()
+{
+    for(int i = 0;i < Cluster_Num;i++){
+        memset(All_Cluster[i].Center,0,sizeof(double)*MAXD);
+        //对所有属于他的点对应维度距离相加
+        for(int j = 0;j < All_Cluster[i].Number;j++){
+            for(int k = 0;k < Point_Dimension;k++){
+                All_Cluster[i].Center[k] += Point[All_Cluster[i].Member[j]][k];
+            }
+        }
+        //求该cluster的平均中点值
+        for(int j = 0;j < Point_Dimension;j++){
+            All_Cluster[i].Center[j] /= All_Cluster[i].Number;
+        }
+    }
+}
 double S_Kmeans::Distance(int p,int c)
 {
     double dis = 0.0;
@@ -119,22 +136,9 @@ double S_Kmeans::Distance(int p,int c)
     return sqrt(dis);
 }
 
-int S_Kmeans::Combiner()
-{
-    memset(Tempcenter,0,sizeof(Tempcenter));
-    for(int k = 0;k < Point_Dimension;k++){
-        for(int j = 0 ;j < Slave_Acluster.Number;j++){
-            Tempcenter[k] += Point[j][k];
-        }
-    }
-    return 0;
-}
-
 int S_Kmeans::Reducer()
 {
-    for(int i = 0;i < Point_Dimension;i++){
-        Tempcenter[i] /= Slave_Acluster.Number;
-    }
+    
     std::string filename = "tempdata_";
     std::string number = std::to_string(Cluster_Index);
     filename += number;
