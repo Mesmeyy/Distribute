@@ -65,7 +65,7 @@ bool D_K_Means::SplitData(){
     int count = 0;
     for(int i = 0;i < Slave_Num;i++){
         std::string number = std::to_string(i);
-        std::string filename = "data_";
+        std::string filename = "splitdata_";
         filename += number;
         filename += ".txt";
         ofstream outfile;
