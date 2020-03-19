@@ -17,9 +17,9 @@
 using namespace std;
 
 const double INF= 1e20;//精细度
-const int MAXD = 1000;
-const int MAXN = 1000;
-const int MAXC = 50;
+const int MAXD = 1000;//维度
+const int MAXN = 1000;//点数目
+const int MAXC = 50;//Cluster类别数
 
 struct aCluster
 {
@@ -31,6 +31,9 @@ struct aCluster
 class S_Kmeans{
     private:
     double Point[MAXN][MAXD];//slave必须要保存所有它拥有的点的所有数值
+    struct aCluster All_Cluster[MAXN];//中心集合
+    int Belong[MAXN];//该点属于的类的下标
+    double PointDistance[MAXN];//该点到所有类的最小距离
 
     public:
     int Cluster_Num;//类的个数
@@ -42,7 +45,7 @@ class S_Kmeans{
     bool Init();
     bool ReadData();//读取全部的样本点
     int Mapper();//进行分片计算
-    double Distance(int index,int j);//根据样本下表计算该样本距离j类中心的距离
+    double Distance(int index,int j);//根据样本下标计算该样本距离j类中心的距离
     int Combiner();//汇总该中心的各个维度总距离
     int Reducer();//求该类各个维度的中心值
 };
@@ -56,10 +59,13 @@ bool S_Kmeans::Init()
     if((Point_Num % Slave_Num )&&(Slave_Index == (Slave_Num -1))){
         Slave_Point_Num = Point_Num - (Slave_Index * every_points);
     }
+    memset(Belong,0,sizeof(int)*MAXN);
+    memset(PointDistance,0,sizeof(double)*MAXN);
     return true;
 }
 bool S_Kmeans::ReadData()
 {
+    //读取本split数据
     std::string filename = "splitdata_";
     std::string number = std::to_string(Slave_Index);
     filename += number;
@@ -73,36 +79,20 @@ bool S_Kmeans::ReadData()
     }
     infile.close();
     std::cout << "slave"<<Slave_Index <<": read "<< filename <<" is ok..."<<std::endl;
-    //每一个slave都需要知道其他slave的中心值才能得知它到样本点是否最小
+    //读取tempcenter所有中心值
+    filename = "tempcenter.txt";
+    infile.open(filename);
     for(int i = 0;i < Cluster_Num;i++){
-        std::string number = std::to_string(i);
-        std::string filename = "tempdata_";
-        filename += number;
-        filename += ".txt";
-        ifstream infile;
-        infile.open(filename);
         for(int j = 0;j < Point_Dimension;j++){
             infile >> All_Cluster[i].Center[j];
         }
     }
-    //slave不需要把数据写入其中，但是他需要从属于它的tempdata里面读取center
+    infile.close();
     return true;
 }
 
 int S_Kmeans::Mapper()
-{
-    std::string filename = "tempdata_";
-    std::string number = std::to_string(Cluster_Index);
-    filename += number;
-    filename += ".txt";
-    ifstream infile;
-    infile.open(filename);
-    double temp;
-    Slave_Acluster.Number = 0;
-    for(int j = 0;j < Point_Dimension;j++){//读取中心
-        infile >> temp;
-        Slave_Acluster.Center[j] = temp;
-    }
+{   //计算本split数据到所有中心的最小距离及属于哪一类
     for(int i = 0;i < Point_Num;i++){
         int index = 0;
         double dis = INF;//这里有问题，不应该每次都是INF,应该记录每个point的最小值

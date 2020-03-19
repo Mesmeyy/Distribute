@@ -163,17 +163,17 @@ bool D_K_Means::TempWrit()//将所有类的中心写入临时文件
         }
     }
 Writetemp:
+    std::string filename = "tempcenter.txt";//把新得到的center放入文件供slave读
+    ofstream outfile;
+    outfile.open(filename);
     for(int i = 0;i < Cluster_Num;i++){
-        std::string filename = "tempcenter.txt";//把新得到的center放入
-        ofstream outfile;
-        outfile.open(filename);
         for(int j = 0;j < Point_Dimension;j++){
             outfile << Cluster[i].Center[j];
             if(j != Point_Dimension-1) outfile << " ";
             else outfile << endl;
         }
-        outfile.close();
     }
+    outfile.close();
     std::cout<<"tempcenter files write is ok..."<<std::endl;
     std::cout << "Err = "<<ERR<<std::endl;
     if(ERR < 0.1) return true;
