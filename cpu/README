@@ -1,0 +1,21 @@
+master是调度程序，相当于framework
+
+slave是单机运行的分片程序，在这里master和slave都在同一台机器上运行
+
+这个例子需要没有进程间通信，需要使用共享磁盘阵列
+
+编译要求:
+        g++ master.cpp -o master
+        g++ slave.cpp -o slave
+
+运行要求:
+        每次运行前需要执行./init.sh，该脚本删除上一次的运行结果
+运行结果:
+        1.splitdata_*.txt:存储分片后的数据
+        2.tempdata_*.txt:存储每个分片的本次产生的中心值
+        3.Result.txt:存储本次kmeans的结果中心值
+有关kmeans的思考:
+        kmeans算法具有不稳定性，即每一次运行结果都可能不同。
+        这来源于，master每次初始化中心值得时候,是随机选择节点的。
+        在每一分片的运行过程中，若随机选取的中心和分片点数据差距悬殊，则在向tempcenter进行本次中心数据汇总的时候，就会出现很大的偏差。
+
