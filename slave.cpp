@@ -62,7 +62,7 @@ bool S_Kmeans::Init()
     else{
         std::cout << "Init error ..." << std::endl;
     }
-    std::cout << "This slave has " << Slave_Point_Num << "points ..." << std::endl;
+    std::cout << "This slave has " << Slave_Point_Num << " points ..." << std::endl;
     memset(Belong,0,sizeof(int)*MAXN);
     memset(Point_Distance,0,sizeof(double)*MAXN);
 
@@ -108,25 +108,26 @@ int S_Kmeans::Mapper()
         double dis = INF;
         int j;
         for(j = 0;j < Cluster_Num;j++){
-            if(Distance(i,j) < dis){
-                dis = Distance(i,j);
+            double disij = Distance(i,j);
+            if(disij < dis){
+                dis = disij;
                 index = j;
             }
         }
+        //点i属于cluster[index]类
         //找到最小点后对号入座
-        Belong[i] = j;
+        Belong[i] = index;
         Point_Distance[i] = dis;
-        All_Cluster[j].Member[All_Cluster[j].Number++] = i;
+        All_Cluster[index].Member[All_Cluster[index].Number++] = i;
     }
     //现在所有的点都找到了自己属于哪个类
-    std::cout << "Mapper over ..."<<std::endl;
     return 0;
 }
 int S_Kmeans::Combiner()
 {
     std::cout << "This is Combiner ..." << std::endl;
     for(int i = 0;i < Cluster_Num;i++){
-        memset(All_Cluster[i].Center,0,sizeof(double)*MAXD);
+        memset(All_Cluster[i].Center,0,sizeof(All_Cluster[i].Center));
         //对所有属于它的点对应维度距离相加
         for(int j = 0;j < All_Cluster[i].Number;j++){
             for(int k = 0;k < Point_Dimension;k++){
@@ -134,13 +135,14 @@ int S_Kmeans::Combiner()
             }
         }
         int number = All_Cluster[i].Number;
+        std::cout << "cluster "<< i << "has point number = " << number << std::endl;
         if(number == 0) continue;//没有点属于该类
         //求该cluster的平均中点值
         for(int j = 0;j < Point_Dimension;j++){
+            //std::cout << "All_Cluster[i].Center[j] = " << All_Cluster[i].Center[j]<<std::endl;
             All_Cluster[i].Center[j] /= number;
         }
     }
-    std::cout << "Combiner over ..." << std::endl;
     return 0;
 }
 double S_Kmeans::Distance(int p,int c)
@@ -167,26 +169,26 @@ int S_Kmeans::Reducer()
             outfile << " ";
         }
     }
-    std::cout << "Reducer over ..."<<std::endl;
     return 0;
 }
 
 int main(int argc,char* argv[])
 {
+    /*
     for(int i = 0;i < argc;i++){
         std::cout << "param "<< i << " = "<<argv[i] << std::endl;
-    }
+    }*/
     S_Kmeans *kmeans = new S_Kmeans();
     kmeans->Cluster_Num = atoi(argv[1]);
     kmeans->Point_Num = atoi(argv[2]);
     kmeans->Point_Dimension = atoi(argv[3]);
     kmeans->Slave_Num = atoi(argv[4]);
     kmeans->Slave_Index = atoi(argv[5]);
-    std::cout << "Slave Cluster_Num = " << kmeans->Cluster_Num << std::endl;
-    std::cout << "Slave Point_Num = " << kmeans->Point_Num << std::endl;
-    std::cout << "Slave Point_Dimension = " << kmeans->Point_Dimension << std::endl;
-    std::cout << "Slave Slave_Num = " << kmeans->Slave_Num << std::endl;
-    std::cout << "Slave Slave_Index = " << kmeans->Slave_Index << std::endl;
+    //std::cout << "Slave Cluster_Num = " << kmeans->Cluster_Num << std::endl;
+    //std::cout << "Slave Point_Num = " << kmeans->Point_Num << std::endl;
+    //std::cout << "Slave Point_Dimension = " << kmeans->Point_Dimension << std::endl;
+    //std::cout << "Slave Slave_Num = " << kmeans->Slave_Num << std::endl;
+    //std::cout << "Slave Slave_Index = " << kmeans->Slave_Index << std::endl;
     kmeans -> Init();
     kmeans -> ReadData();
     kmeans -> Mapper();

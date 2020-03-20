@@ -49,8 +49,9 @@ bool D_K_Means::SplitData(){
     //确定每个分片的点数
     std:cout << "This is SplitData ..." << std::endl;
     double n = (double)Point_Num;
+    std::cout << "Always n = " << n << "; Slave_Num = " << Slave_Num << std::endl;
     int every_points = ceil(n/Slave_Num);//除最后一片，每片拿走every_points个数
-    std::cout << "There are "<< every_points <<"points in one split..."<<std::endl;
+    std::cout << "There are "<< every_points <<" points in one split..."<<std::endl;
     int count = 0;
     for(int i = 0;i < Slave_Num;i++){
         std::string number = std::to_string(i);
@@ -60,15 +61,18 @@ bool D_K_Means::SplitData(){
         ofstream outfile;
         outfile.open(filename);
         std::cout << "In split there is creating filename = " << filename << std::endl;
+        int changes_number= 0;
         while(1){
             for(int j = 0;j < Point_Dimension;j++) {
                 outfile << Point[count][j];
                 outfile << " ";
             }
+            changes_number ++;
             count ++;
             if(!(count % every_points)) break;//满足一个完整的split的数据个数
             if(count == Point_Num) break;//所有点都划分完毕
         }
+        std::cout << filename << " has " << changes_number << "numbers ..." << std::endl;
     }
     std::cout << "SplitData over ..." << std::endl;
     return true;
@@ -116,7 +120,7 @@ int D_K_Means::Init()//初始化K个类的中心
 bool D_K_Means::TempWrite()//将所有类的中心写入临时文件
 {
     std::cout << "This is TempWrite ..." << std::endl;
-    double ERR=0.0;
+    double ERR = 0.0;
     for(int i = 0;i < Cluster_Num;i++){
         memset(TempCluster[i].Center,0,sizeof(TempCluster[i].Center));
     }
@@ -130,8 +134,16 @@ bool D_K_Means::TempWrite()//将所有类的中心写入临时文件
         infile.open(filename);
         if(!infile){
             //在Init中执行TempWrit函数,Slave还没启动
+            std::cout << filename <<" is not exist ..." << std::endl;
+            for(int i = 0;i < Cluster_Num;i++){
+                for(int j = 0; j < Point_Dimension;j++){
+                    TempCluster[i].Center[j] = 0;
+                }
+            }
+            goto Writenewcenter;
         }else{
             double tempdata;
+            std::cout << "Master gets file = "<< filename << std::endl;
             for(int i = 0;i < Cluster_Num;i++){
                 for(int j = 0;j < Point_Dimension;j++){
                     infile >> tempdata;
@@ -139,23 +151,34 @@ bool D_K_Means::TempWrite()//将所有类的中心写入临时文件
                 }
             }
         }
+        infile.close();
     }
-    //汇聚各个Slave后求平均中心值就是TempCluster最新值,第一次Tempcluster都是0
+    //汇聚各个Slave后求平均中心值就是TempClustermZ,第一次TempCluster都是0
     for(int i = 0;i < Cluster_Num;i++){
         for(int j = 0;j < Point_Dimension;j++){
             TempCluster[i].Center[j] /= Slave_Num;
         }
     }
-    for(int i=0;i<Cluster_Num;i++)//更新Cluster.Center同时计算与上一次迭代的变化（取2范数的平方）
+    //输出TempCluster的临时值
+    //临时值在第二次就应该是一样的了。因为每次slave迭代都是当前点的平均值
+    //这个暂时有问题，问一下老师
+    for(int i = 0;i < Cluster_Num;i++)//更新Cluster[i].Center同时计算与上一次迭代的变化（取2范数的平方）
     {
-        for(int j=0;j<Point_Dimension;j++)
+        for(int j = 0;j<Point_Dimension;j++)
         {
             double temperr = TempCluster[i].Center[j]-Cluster[i].Center[j];
-            ERR += (TempCluster[i].Center[j]-Cluster[i].Center[j])*(TempCluster[i].Center[j]-Cluster[i].Center[j]);
-            Cluster[i].Center[j]=TempCluster[i].Center[j];
+            //if(temperr == 0) std::cout << "tempcenter = center " << std::endl;
+            ERR += (temperr * temperr);
+            Cluster[i].Center[j] = TempCluster[i].Center[j];
         }
     }
 Writenewcenter:
+    /*
+    for(int i = 0;i < Cluster_Num;i++){
+        for(int j = 0;j < Point_Dimension;j++){
+            std::cout << "Cluster[i].center[j] = " << Cluster[i].Center[j] << std::endl;
+        }
+    }*/
     std::string filename = "tempcenter.txt";//把新得到的center放入文件供slave读
     ofstream outfile;
     outfile.open(filename);
@@ -169,7 +192,7 @@ Writenewcenter:
     outfile.close();
     std::cout << "ERR = " << ERR << std::endl;
     std::cout << "TempWrite over ..." << std::endl;
-    if(ERR < 1) return true;//精细度是1
+    if(ERR < 0.1) return true;//精细度是1
     else return false;
 }
 
@@ -199,11 +222,16 @@ int FrameWork(D_K_Means *kmeans)
 {
     bool converged = false;
     int times = 1;
+    kmeans->Slave_Num = 4;//计划分为4片
     kmeans->ReadData();
     kmeans->SplitData();
-    kmeans->Slave_Num = 4;//计划分四片
-    std::cout << "master has cluster number = "<< kmeans->Slave_Num<<std::endl;
+    std::cout << "master has cluster number = "<< kmeans->Cluster_Num<<std::endl;
+    int count = 0;
     while(converged == false){
+        if(count == 1) break;
+        std::cout << "**********************************************************************"<<std::endl;
+        std::cout << "the " << count++ << std::endl;
+        std::cout << "**********************************************************************"<<std::endl;
         for(int index = 0; index < kmeans->Slave_Num;index++){
             std::string command = "./slave ";
             std::string number = std::to_string(kmeans->Cluster_Num);
