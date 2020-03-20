@@ -31,7 +31,6 @@ class D_K_Means
     //int Point_Num;//样本数
     //int Point_Dimension;//样本属性维度
     aCluster TempCluster[MAXC];//临时存放类的中心
-    //double Distance(int,int);
 
     public:
     int Cluster_Num;//类的个数
@@ -41,24 +40,14 @@ class D_K_Means
     bool ReadData();//读取初始数据
     bool SplitData();//点数据分片存储
     int Init();//初始化K类的中心
-    bool TempWrit();//将一轮迭代结束后的结果写入临时文件
+    bool TempWrite();//将一轮迭代结束后的结果写入临时文件
     int Write_Result();//输出结果
 
     int Get_Cluster_Num();
 };
-/*
-double D_K_Means::Distance(int p,int c)//编号为p的点与第c类的中心的距离
-{
-    double dis=0;
-    for(int j=0;j<Point_Dimension;j++)
-    {
-        dis+=(Point[p][j]-Cluster[c].Center[j])*(Point[p][j]-Cluster[c].Center[j]);//算的是各个维度以后的综合距离，而不是单个维度
-    }
-    return sqrt(dis);
-}
-*/
 bool D_K_Means::SplitData(){
     //确定分片数目
+    std:cout << "This is SplitData ..." << std::endl;
     double n = (double)Point_Num;
     int every_points = ceil(n/Slave_Num);//除最后一片，每片拿走every_points个数
     std::cout << "There are "<< every_points <<"points in one split..."<<std::endl;
@@ -81,6 +70,9 @@ bool D_K_Means::SplitData(){
             if(count == Point_Num) break;//所有点都划分完毕
         }
     }
+    std::cout << "SplitData over ..." << std::endl;
+    return true;
+
 }
 bool D_K_Means::ReadData()//读取数据
 {
@@ -100,7 +92,7 @@ bool D_K_Means::ReadData()//读取数据
     infile.close();
     std::cout << "read data.txt is ok..."<<std::endl;
     Init();//初始化K个类的中心
-    TempWrit();//将所有类的中心作为第一轮迭代前的数据写入临时文件
+    TempWrite();//将所有类的中心作为第一轮迭代前的数据写入临时文件
 }
 
 int D_K_Means::Init()//初始化K个类的中心
@@ -121,8 +113,9 @@ int D_K_Means::Init()//初始化K个类的中心
 
 
 //该函数只能在master上进行，用于计算误差，以便得到新的聚类中心，同时确定是否需要继续迭代,这块在master里面将来需要改动
-bool D_K_Means::TempWrit()//将所有类的中心写入临时文件
+bool D_K_Means::TempWrite()//将所有类的中心写入临时文件
 {
+    std::cout << "This is TempWrite ..." << std::endl;
     double ERR=0.0;
     for(int i = 0;i < Cluster_Num;i++){
         memset(TempCluster[i].Center,0,sizeof(TempCluster[i].Center));
@@ -176,12 +169,14 @@ Writetemp:
     outfile.close();
     std::cout<<"tempcenter files write is ok..."<<std::endl;
     std::cout << "Err = "<<ERR<<std::endl;
+    std::cout << "TempWrite over ..." << std::endl;
     if(ERR < 0.1) return true;
     else return false;
 }
 
 int  D_K_Means::Write_Result()//输出结果
 {
+    std::cout << "This is Write_Result ..." << std::endl;
     ofstream outfile;
     outfile.open("Result.txt");
     for(int i = 0;i < Cluster_Num;i++){
@@ -192,6 +187,7 @@ int  D_K_Means::Write_Result()//输出结果
         std::cout << std::endl;
     }
     outfile.close();
+    std::cout <<"Write_Result over ..." << std::endl;
     return  0;
 }
 
@@ -225,7 +221,7 @@ int FrameWork(D_K_Means *kmeans)
             system(command.c_str());
         }
         sleep(2);
-        converged = kmeans -> TempWrit();
+        converged = kmeans -> TempWrite();
     }
     kmeans->Write_Result();//把结果写入文件
     return 0;

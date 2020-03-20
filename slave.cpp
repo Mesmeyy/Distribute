@@ -78,7 +78,7 @@ bool S_Kmeans::ReadData()
         }
     }
     infile.close();
-    std::cout << "slave"<<Slave_Index <<": read "<< filename <<" is ok..."<<std::endl;
+    std::cout << "slave"<< Slave_Index <<": read "<< filename <<" is ok..."<<std::endl;
     //读取tempcenter所有中心值
     filename = "tempcenter.txt";
     infile.open(filename);
@@ -92,6 +92,7 @@ bool S_Kmeans::ReadData()
 }
 int S_Kmeans::Mapper()
 {   
+    std:cout << "This is Mapper ..." << std::endl;
     //计算本split数据到所有中心的最小距离及属于哪一类
     for(int i = 0;i < Slave_Point_Num;i++){
         int index = -1;
@@ -109,23 +110,28 @@ int S_Kmeans::Mapper()
         All_Cluster[j].Member[All_Cluster[j].Number++] = i;
     }
     //现在所有的点都找到了自己属于哪个类
+    std::cout << "Mapper over ..."<<std::endl;
     return 0;
 }
 int S_Kmeans::Combiner()
 {
+    std::cout << "This is Combiner ..." << std::endl;
     for(int i = 0;i < Cluster_Num;i++){
         memset(All_Cluster[i].Center,0,sizeof(double)*MAXD);
-        //对所有属于他的点对应维度距离相加
+        //对所有属于它的点对应维度距离相加
         for(int j = 0;j < All_Cluster[i].Number;j++){
             for(int k = 0;k < Point_Dimension;k++){
                 All_Cluster[i].Center[k] += Point[All_Cluster[i].Member[j]][k];
             }
         }
+        int number = All_Cluster[i].Number;
         //求该cluster的平均中点值
         for(int j = 0;j < Point_Dimension;j++){
-            All_Cluster[i].Center[j] /= All_Cluster[i].Number;
+            All_Cluster[i].Center[j] /= number;
         }
     }
+    std::cout << "Combiner over ..." << std::endl;
+    return 0;
 }
 double S_Kmeans::Distance(int p,int c)
 {
@@ -138,17 +144,20 @@ double S_Kmeans::Distance(int p,int c)
 
 int S_Kmeans::Reducer()
 {
-    
+    std::cout << "This is Reducer ..."<<std::endl;
     std::string filename = "tempdata_";
-    std::string number = std::to_string(Cluster_Index);
+    std::string number = std::to_string(Slave_Index);
     filename += number;
     filename += ".txt";
     ofstream outfile;
     outfile.open(filename);
-    for(int i = 0;i < Point_Dimension;i++){
-        outfile << Tempcenter[i];
-        outfile << " ";
+    for(int i = 0;i < Cluster_Num;i++){
+        for(int j = 0;j < Point_Dimension;j++){
+            outfile << All_Cluster[i].Center[j];
+            outfile << " ";
+        }
     }
+    std::cout << "Reducer over ..."<<std::endl;
     return 0;
 }
 
