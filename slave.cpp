@@ -53,14 +53,23 @@ bool S_Kmeans::Init()
 {
     double n = (double)Point_Num;
     int every_points = ceil(n/Slave_Num);
-    if(!(Point_Num % Slave_Num)){
+    if(!(Point_Num % Slave_Num) || Slave_Index != (Slave_Num - 1)){
         Slave_Point_Num = every_points;
     }
-    if((Point_Num % Slave_Num )&&(Slave_Index == (Slave_Num -1))){
+    else if((Point_Num % Slave_Num )&&(Slave_Index == (Slave_Num -1))){
         Slave_Point_Num = Point_Num - (Slave_Index * every_points);
     }
+    else{
+        std::cout << "Init error ..." << std::endl;
+    }
+    std::cout << "This slave has " << Slave_Point_Num << "points ..." << std::endl;
     memset(Belong,0,sizeof(int)*MAXN);
     memset(Point_Distance,0,sizeof(double)*MAXN);
+
+    for(int i = 0; i < Cluster_Num;i++){
+        All_Cluster[i].Number = 0;
+        memset(All_Cluster[i].Member,0,sizeof(All_Cluster[i].Member));
+    }
     return true;
 }
 bool S_Kmeans::ReadData()
@@ -125,6 +134,7 @@ int S_Kmeans::Combiner()
             }
         }
         int number = All_Cluster[i].Number;
+        if(number == 0) continue;//没有点属于该类
         //求该cluster的平均中点值
         for(int j = 0;j < Point_Dimension;j++){
             All_Cluster[i].Center[j] /= number;

@@ -46,7 +46,7 @@ class D_K_Means
     int Get_Cluster_Num();
 };
 bool D_K_Means::SplitData(){
-    //确定分片数目
+    //确定每个分片的点数
     std:cout << "This is SplitData ..." << std::endl;
     double n = (double)Point_Num;
     int every_points = ceil(n/Slave_Num);//除最后一片，每片拿走every_points个数
@@ -101,13 +101,13 @@ int D_K_Means::Init()//初始化K个类的中心
     for(int i = 0;i < Cluster_Num;i++)
     {
         int r = rand() % Point_Num;//随机选择所有样本点中的一个作为第i类的中心
-        Cluster[i].Member[0]=r;
+        //Cluster[i].Member[0]=r;
         for(int j = 0;j < Point_Dimension;j++)
         {
             Cluster[i].Center[j] = Point[r][j];
         }
     }
-    std::cout <<"tempcenter choice is ok..."<<std::endl;
+    std::cout <<"tempcenter rand choice is ok..."<<std::endl;
     return 0;
 }
 
@@ -129,7 +129,7 @@ bool D_K_Means::TempWrite()//将所有类的中心写入临时文件
         ifstream infile;
         infile.open(filename);
         if(!infile){
-            //第一次执行TempWrit函数
+            //在Init中执行TempWrit函数,Slave还没启动
         }else{
             double tempdata;
             for(int i = 0;i < Cluster_Num;i++){
@@ -140,7 +140,7 @@ bool D_K_Means::TempWrite()//将所有类的中心写入临时文件
             }
         }
     }
-    //汇聚各个Slave后求平均中心值就是TempCluster最新值
+    //汇聚各个Slave后求平均中心值就是TempCluster最新值,第一次Tempcluster都是0
     for(int i = 0;i < Cluster_Num;i++){
         for(int j = 0;j < Point_Dimension;j++){
             TempCluster[i].Center[j] /= Slave_Num;
@@ -151,11 +151,11 @@ bool D_K_Means::TempWrite()//将所有类的中心写入临时文件
         for(int j=0;j<Point_Dimension;j++)
         {
             double temperr = TempCluster[i].Center[j]-Cluster[i].Center[j];
-            ERR+=(TempCluster[i].Center[j]-Cluster[i].Center[j])*(TempCluster[i].Center[j]-Cluster[i].Center[j]);
+            ERR += (TempCluster[i].Center[j]-Cluster[i].Center[j])*(TempCluster[i].Center[j]-Cluster[i].Center[j]);
             Cluster[i].Center[j]=TempCluster[i].Center[j];
         }
     }
-Writetemp:
+Writenewcenter:
     std::string filename = "tempcenter.txt";//把新得到的center放入文件供slave读
     ofstream outfile;
     outfile.open(filename);
@@ -167,10 +167,9 @@ Writetemp:
         }
     }
     outfile.close();
-    std::cout<<"tempcenter files write is ok..."<<std::endl;
-    std::cout << "Err = "<<ERR<<std::endl;
+    std::cout << "ERR = " << ERR << std::endl;
     std::cout << "TempWrite over ..." << std::endl;
-    if(ERR < 0.1) return true;
+    if(ERR < 1) return true;//精细度是1
     else return false;
 }
 
@@ -202,7 +201,7 @@ int FrameWork(D_K_Means *kmeans)
     int times = 1;
     kmeans->ReadData();
     kmeans->SplitData();
-    kmeans->Slave_Num = 4;
+    kmeans->Slave_Num = 4;//计划分四片
     std::cout << "master has cluster number = "<< kmeans->Slave_Num<<std::endl;
     while(converged == false){
         for(int index = 0; index < kmeans->Slave_Num;index++){
