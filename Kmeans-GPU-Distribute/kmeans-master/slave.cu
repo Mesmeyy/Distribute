@@ -31,7 +31,20 @@ void random_labels(thrust::device_vector<int>& labels, int n, int k) {
 }
 bool ReadData(thrust::device_vector<int>& data,int m,int d,int index)
 {
-    //.........
+    std::string filename = "splitdata_";
+    std::string number = std::to_string(index);
+    filename += number;
+    filename += ".txt";
+    ifstream infile;
+    infile.open(filename);
+    if(!infile) return false;
+    for(int i = 0;i < m;i++){
+        for(int j = 0;j < d;j++){
+            infile >> data[i * d + j];
+        }
+    }
+    infile.close();
+    std::cout << "slave" << index << ": read " <<filename<<" is ok..."<<std::endl;
     return true;
 }
 int main(int argc,char* argv[]) 
@@ -56,17 +69,18 @@ int main(int argc,char* argv[])
     thrust::device_vector<double> *distances[16];//同上
     for (int q = 0; q < n_gpu; q++) {
         cudaSetDevice(q);
-        data[q] = new thrust::device_vector<double>(n/n_gpu*Point_Dimension);//一个GPU管一片数据
-        labels[q] = new thrust::device_vector<int>(n/n_gpu*Point_Dimension);//一片数据属于哪个类的下标集合
+        data[q] = new thrust::device_vector<double>(Point_Num/n_gpu*Point_Dimension);//一个GPU管一片数据
+        labels[q] = new thrust::device_vector<int>(Point_Num/n_gpu*Point_Dimension);//一片数据属于哪个类的下标集合
         centroids[q] = new thrust::device_vector<double>(Cluster_Num * Point_Dimension);//存储本片数据得出来的中心???
         distances[q] = new thrust::device_vector<double>(Point_Num);//不懂为什么创建Point_Num而不是Point_Num/n_gpu
     }
     for (int q = 0; q < n_gpu; q++) {
-        ReadData(*data[q],n/n_gpu,Point_Dimension,Slave_Index);
-        random_labels(*labels[q], n/n_gpu, k);//array[n/n_gpu] 但是让他们属于k个标签中的一???    }
+        ReadData(*data[q],Point_Num/n_gpu,Point_Dimension,Slave_Index);
+        random_labels(*labels[q], Point_Num/n_gpu, Cluster_Num);//array[n/n_gpu] 但是让他们属于k个标签中的一???    }
     kmeans::timer t;
     t.start();
-    kmeans::kmeans(iterations, n, d, k, data, labels, centroids, distances, n_gpu);//执行kmeans,拿到的是所有数???    float time = t.stop();
+    kmeans::kmeans(iterations, Point_Num, Point_Dimension, Cluster_Num, data, labels, centroids, distances, n_gpu);//执行kmeans,拿到的是所有数
+    float time = t.stop();
     std::cout << "  Time: " << time/1000.0 << " s" << std::endl;
 
     for (int q = 0; q < n_gpu; q++) {

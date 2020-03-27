@@ -4,6 +4,7 @@
 #include <thrust/iterator/counting_iterator.h>
 
 #include "labels.h"
+#include <fstream>
 
 __device__ double atomicAdd(double* address, double val)
 {
@@ -92,7 +93,35 @@ __global__ void scale_centroids(int d, int k, int* counts, double* centroids) {
         centroids[global_id_x + d * global_id_y] *= scale;
     }
 }
-
+void Read_Center(int k,int d,thrust::device_vector<double>& centroids){
+    ifstream infile;
+    std::string filename = "tempcenter.txt";
+    infile.open(filename);
+    if(!infile) return false;
+    for(int i = 0;i < k;i++){
+        for(int j = 0;j < d;j++){
+           infile >> centroids[j * d + j] ;
+        }
+    }
+    infile.close();
+    std::cout << "slave read tempcenter.txt is ok..." << std::endl;
+    return true;
+}
+void Save_Center(int k,int d,thrust::host_vector<double>& centroids,int index){
+    std::string filename = "tempdata_";
+    std::string number = std::to_string(index);
+    filename += number;
+    filename += ".txt";
+    ofstream outfile;
+    outfile.open(filename);
+    for(int i = 0;i < k;i++){
+        for(int j = 0;j < d;j++){
+            outfile << centroids[i * d + j ];
+            outfile << " ";
+        }
+    }
+    outfile.close();
+}
 void find_centroids(int n, int d, int k,
                     thrust::device_vector<double>& data,
                     thrust::device_vector<int>& labels,
