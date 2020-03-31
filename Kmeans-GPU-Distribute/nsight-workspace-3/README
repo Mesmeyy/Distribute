@@ -1,0 +1,15 @@
+名称:分布式Kmeans算法GPU版本
+
+准备:
+    cuda:10.1 driver:418.39
+    nsight编辑环境
+    nsight-workspace-3工作目录
+    原始数据环境:/data/006zzy/files/data.txt （在Kmeans-CPU-Distribute中）
+
+编译：
+    直接build工作编译Master和Slave工程，注意调整CUB的链接路径
+
+运行:
+    1.执行init.sh (在Kmeans-CPU-Distribute中)
+    2.cd /Master/Debug
+    3 ./Master
